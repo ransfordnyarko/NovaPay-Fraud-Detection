@@ -1,83 +1,64 @@
-# NovaPay Dataset Report
+# FINAL SUMMARY REPORT
 
-This document is a data assessment report summarizing the data scope and assessing the imbalance and bias risks
+## 📊 DATASET OVERVIEW
 
----
+- Total Transactions: 10,757
+- Fraud Cases: 982 (9.13%)
+- Train Set: 8,605 rows (675 fraud)
+- Test Set: 2,152 rows (307 fraud)
 
-## Data Scope
+## 🎯 MODEL PERFORMANCE (Test Set)
 
-The NovaPay dataset contains 11,400 cross-border transactions primarily across the United States, Canada and United Kingdom processed by NovaPay. Each record represents a single transaction and contains transaction metadata, customer attributes, and risk indicator. This data would be relied on to build a fraud detection model. Find below a data dictionary to explain in detail the data collected for each record
+| Model               | Precision | Recall | F1   | ROC-AUC |
+| ------------------- | --------- | ------ | ---- | ------- |
+| Logistic Regression | 96.64%    | 93.81% | 0.95 | 0.98    |
+| Random Forest       | 100.00%   | 92.18% | 0.96 | 0.98    |
+| XGBoost_SMOTE       | 99.30%    | 92.51% | 0.96 | 0.98    |
+| LGBM_SMOTE          | 83.87%    | 93.16% | 0.88 | 0.97    |
 
----
+## 🏆 BEST MODEL: Random Forest (However XGBOost Selected for Recall Score)
 
-## NovaPay Dataset Dictionary
+- Precision: 100.00%
+- Recall: 92.18%
+- Zero false positives: True
 
-## Data Dictionary
+## 🔍 TOP FRAUD INDICATORS (SHAP / Feature Analysis)
 
-### Transaction Metadata
+1. dest_currency
+2. home_country
+3. source_currency_USD
+4. device_trust_score
+5. device_risk
 
-| Column Name               | Data Type            | Description                                                       |
-| ------------------------- | -------------------- | ----------------------------------------------------------------- |
-| transaction_id            | string (identifier)  | Unique identifier for each transaction                            |
-| channel                   | categorical (string) | Channel used to initiate the transaction (e.g., ATM, mobile, web) |
-| source_currency           | categorical (string) | Currency in which the transaction was initiated                   |
-| dest_currency             | categorical (string) | Currency received by the beneficiary                              |
-| amount_src                | numeric (float)      | Transaction amount in the source currency                         |
-| amount_usd                | numeric (float)      | Transaction amount normalized to USD                              |
-| fee                       | numeric (float)      | Fee charged for processing the transaction                        |
-| exchange_rate_src_to_dest | numeric (float)      | Exchange rate applied for currency conversion                     |
+## 💡 KEY BUSINESS INSIGHTS
 
-### Temporal & Behavioral Features
+- Fraud activity is strongly time-dependent, with elevated risk during early morning hours (3–7 AM), peaking around 5–6 AM. Fraud rates drop substantially during standard business hours, suggesting attackers exploit low-monitoring windows. Monthly fraud rates show limited variance, indicating no strong seasonal dependency. This supports the robustness of the model across time
+- Transaction velocity signals show the strongest association with fraud: 24-hour velocity (ρ = 0.76) and 1-hour velocity (ρ = 0.70). Internal risk score also exhibits a strong relationship with fraud outcomes (ρ = 0.61), reinforcing the importance of behavioral and velocity-based features
+- Account age is a dominant fraud risk factor: fraud rates peak during the first 90 days of account life and decline rapidly thereafter, suggesting early-lifecycle targeting by fraudsters
+- Fraud risk peaks in the $2,000–$5,000 range, indicating attacker optimization for high-value transactions that avoid enhanced scrutiny.
+- Fraud risk escalates rapidly once IP risk exceeds 0.7, suggesting IP reputation as a high-confidence signal suitable for hard controls or step-up verification
 
-| Column Name      | Data Type         | Description                                           |
-| ---------------- | ----------------- | ----------------------------------------------------- |
-| timestamp        | datetime          | Time at which the transaction was initiated           |
-| txn_velocity_1h  | numeric (integer) | Number of transactions initiated in the past hour     |
-| txn_velocity_24h | numeric (integer) | Number of transactions initiated in the past 24 hours |
+## 🚀 PROJECT OUTCOMES
 
-### Customer Data
+- Achieved high precision with minimal customer friction
+- Identified actionable fraud patterns for business rules
+- Ready for production deployment
 
-| Column Name              | Data Type            | Description                                       |
-| ------------------------ | -------------------- | ------------------------------------------------- |
-| customer_id              | string (identifier)  | Unique identifier for the customer                |
-| home_country             | categorical (string) | Customer’s registered country of residence        |
-| kyc_tier                 | categorical (string) | Customer verification level                       |
-| account_age_days         | numeric (integer)    | Days since the customer account was created       |
-| chargeback_history_count | numeric (integer)    | Number of historical chargebacks for the customer |
+### Saved Artifacts
 
-### Device & Network Signals
+- **Trained Model**
+  - The selected best-performing model (XGBoost) has been serialized and saved.
+  - (fraud_model_xgb.joblib)
 
-| Column Name        | Data Type            | Description                                            |
-| ------------------ | -------------------- | ------------------------------------------------------ |
-| device_id          | string (identifier)  | Identifier for the device used                         |
-| new_device         | boolean              | Indicates whether the device is new for the customer   |
-| device_trust_score | numeric (float)      | Trust score assigned to the device                     |
-| ip_address         | string (identifier)  | IP address used for the transaction                    |
-| ip_country         | categorical (string) | Country inferred from the IP address                   |
-| location_mismatch  | boolean              | Indicates mismatch between IP country and home country |
-| ip_risk_score      | numeric (float)      | Risk score associated with the IP address              |
+- **SHAP Explainer**
+  - A SHAP `TreeExplainer` object has been saved to preserve the explainability
+    configuration tied to the trained model.
+  - This ensures consistency between model predictions and explanation logic.
+  - (shap_explainer_xgb_joblib)
 
-### Risk & Compliance Signals
-
-| Column Name         | Data Type       | Description                                                |
-| ------------------- | --------------- | ---------------------------------------------------------- |
-| corridor_risk       | numeric (float) | Risk score associated with the source–destination corridor |
-| risk_score_internal | numeric (float) | Internal risk score generated prior to transaction         |
-
-### Target Variable
-
-| Column Name | Data Type       | Description                                          |
-| ----------- | --------------- | ---------------------------------------------------- |
-| is_fraud    | binary (target) | Indicates whether the transaction is confirmed fraud |
-
----
-
-## NovaPay Dataset Quality Findings and Class Imbalance
-
-An initial data quality assessment identified multiple issues across categorical, continuous, and enrichment variables that require attention prior to modeling. Categorical variables showed significant normalization problems. In `home_country`, multiple representations of the same country were observed due to inconsistent casing and trailing whitespace (e.g., `"US"`, `" US "`, `"UK"`, `" UK "`), along with placeholder values such as `"unknown"`. The `channel` variable exhibited even greater inconsistency, including variations in casing, spacing, and spelling (e.g., `"web"`, `"WEB"`, `"web "`, `"ATM"`, `"ATm"`, `"weeb"`, `"mobile "`), indicating logging or ingestion issues that would inflate cardinality and distort category-level fraud signals if left uncorrected. The `kyc_tier` field contained mixed casing, trailing spaces, misspellings (e.g., `"standrd"`), explicit string encodings of missing values (e.g., `"NAN"`, `" nan "`), and true nulls, all of which need to be consolidated into a controlled and semantically meaningful set of categories. \
-
-Continuous variables also revealed values that are implausible from a business and logical standpoint. The `fee` variable contained negative values, which are inconsistent with expected transaction fee behavior, as well as extreme outliers with values approaching 10,000, suggesting potential adjustment artifacts, special-case transactions, or data entry errors. The `device_trust_score`, which is expected to fall within a bounded range between 0 and 1, included negative values, indicating possible scaling errors or issues in upstream score generation. Similarly, the `txn_velocity_1h` feature, which represents a transaction count, contained negative values despite counts being inherently non-negative, pointing to potential preprocessing or aggregation logic errors. These findings indicate that while extreme values should not be automatically removed in a fraud context, several fields require validation and correction to ensure semantic correctness.
-
-An assessment of missing values showed that core identifiers and primary transaction metadata are largely complete; however, missingness is concentrated in enrichment and auxiliary risk features. Approximately 300 records are missing values for `amount_usd`, `ip_address`, `ip_country`, `kyc_tier`, `fee`, and `device_trust_score`, suggesting incomplete coverage from currency normalization, network attribution, KYC processes, or device reputation systems. The `timestamp` field also contains a small number of missing values, which is notable given its importance for temporal and velocity-based features and may require row-level handling. This pattern of missingness appears systematic rather than random and should be explicitly modeled or encoded rather than naively imputed.
-
-Finally, the target variable exhibits moderate class imbalance, with approximately 8.7% of transactions labeled as fraudulent and 91.3% labeled as legitimate. While this imbalance is typical in fraud detection datasets, it has direct implications for model training and evaluation, necessitating the use of metrics such as precision, recall, and area under the precision–recall curve rather than accuracy alone. Overall, the dataset is suitable for fraud modeling, but the identified data quality issues highlight the need for targeted normalization, validation, and missing-value strategies before proceeding to feature engineering and model development.
+- **SHAP Values and Feature names**
+  - Precomputed SHAP values for the test set have been saved.
+  - These values are used for both global feature importance analysis and
+    transaction-level explanations.
+  - shap_values_xgb.npy
+  - feature_names.json
