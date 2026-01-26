@@ -16,7 +16,7 @@
 | XGBoost_SMOTE       | 99.30%    | 92.51% | 0.96 | 0.98    |
 | LGBM_SMOTE          | 83.87%    | 93.16% | 0.88 | 0.97    |
 
-## 🏆 BEST MODEL: Random Forest (However XGBOost Selected for Recall Score)
+## 🏆 BEST MODEL: Random Forest (However XGBoost Selected for Recall Score)
 
 - Precision: 100.00%
 - Recall: 92.18%
