@@ -26,7 +26,7 @@
 
 1. dest_currency
 2. home_country
-3. source_currency_USD
+3. source_currency
 4. device_trust_score
 5. device_risk
 
